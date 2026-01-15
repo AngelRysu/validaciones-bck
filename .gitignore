@@ -84,6 +84,9 @@ web_modules/
 .env.production.local
 .env.local
 
+#api calls
+api-calls/
+
 service-account-key.json
 # ecosystem environment variable files
 ecosystem.config.js

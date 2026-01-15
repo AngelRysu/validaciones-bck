@@ -5,6 +5,8 @@ const https = require("https");
 const fs = require("fs");
 const cors = require('cors');
 
+const routerFirmas = require("./router/firma");
+
 dotenv.config();
 
 const app = express();
@@ -23,6 +25,7 @@ const corsOptions = {
 };
 app.use(cors(corsOptions)); 
 
+routerFirmas(app);
 
 let server;
 if (process.env.NODE_ENV === 'PRODUCCION') {

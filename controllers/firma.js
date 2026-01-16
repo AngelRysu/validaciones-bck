@@ -46,6 +46,39 @@ const firma_individual = (req, res) => {
     
 }
 
+const firma_multiple = (req, res) => {
+    const {cadena} = req.body;
+
+    if (!req.file) {
+        return res.status(400).json({ ok: false, error: "No se subió ningún archivo de llave" });
+    }
+
+    try{
+        const llavePrivadaPem = req.file.buffer.toString('utf8');
+
+        const obj_final = [];
+
+        for(individual of cadena){
+            const objeto_individual = {
+                cadenaOrigen: individual,
+                sello: firmar_cadena(individual, llavePrivadaPem)
+            }
+            obj_final.push(objeto_individual);
+        }
+
+       res.status(200).json({ok: true, data: obj_final});
+
+    }catch(err){
+        console.log(err);
+        res.status(400).json({
+            ok: false,
+            msg: "firma no valida"
+        });
+    }
+
+}
+
 module.exports = {
-    firma_individual
+    firma_individual,
+    firma_multiple
 }

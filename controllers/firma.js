@@ -19,18 +19,32 @@ const firmar_cadena = (cadena, llave) => {
     return signature;
 }
 
-const firma_individual = (req, res) => {
-    const { cadena } = req.body; 
+const firmar_cadena_llave = (cadena, llave, pass) => {
+    const signature = crypto.sign(
+        "sha256",
+        Buffer.from(cadena),
+        {
+            key: llave,
+            passphrase: pass,
+            format: 'der',
+            type: 'pkcs8'
+        }
+    );
 
-    // El archivo de la llave está en req.file
+    return signature.toString('base64');
+}
+
+const firma_individual = (req, res) => {
+    const { cadena, password } = req.body; 
+
     if (!req.file) {
         return res.status(400).json({ ok: false, error: "No se subió ningún archivo de llave" });
     }
 
     try{
-        const llavePrivadaPem = req.file.buffer.toString('utf8');
+        const llavePrivada = req.file.buffer;
 
-        const sello = firmar_cadena(cadena, llavePrivadaPem);
+        const sello = firmar_cadena_llave(cadena, llavePrivada, password);
 
         res.status(200).json({
             ok: true,
@@ -38,6 +52,7 @@ const firma_individual = (req, res) => {
             sello: sello
         });
     }catch(err){
+        console.log(err);
         res.status(400).json({
             ok: false,
             msg: "firma no valida"

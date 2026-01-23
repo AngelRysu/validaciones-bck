@@ -35,7 +35,7 @@ const firmar_cadena_llave = (cadena, llave, pass) => {
 }
 
 const firma_individual = (req, res) => {
-    const { cadena, password } = req.body; 
+    const { cadena, tipo_firma, password } = req.body; 
 
     if (!req.file) {
         return res.status(400).json({ ok: false, error: "No se subió ningún archivo de llave" });
@@ -48,6 +48,7 @@ const firma_individual = (req, res) => {
 
         res.status(200).json({
             ok: true,
+            tipo_firma,
             cadenaOrigen: cadena,
             sello: sello
         });
@@ -62,21 +63,23 @@ const firma_individual = (req, res) => {
 }
 
 const firma_multiple = (req, res) => {
-    const {cadena} = req.body;
+    const {cadena, tipo_firma, password} = req.body;
 
     if (!req.file) {
         return res.status(400).json({ ok: false, error: "No se subió ningún archivo de llave" });
     }
 
     try{
-        const llavePrivadaPem = req.file.buffer.toString('utf8');
+        const llavePrivada = req.file.buffer;
 
         const obj_final = [];
 
         for(individual of cadena){
+            const sello = firmar_cadena_llave(individual, llavePrivada, password);
             const objeto_individual = {
                 cadenaOrigen: individual,
-                sello: firmar_cadena(individual, llavePrivadaPem)
+                tipo_firma,
+                sello: sello
             }
             obj_final.push(objeto_individual);
         }

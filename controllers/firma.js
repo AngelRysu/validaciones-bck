@@ -1,4 +1,6 @@
 const crypto = require('crypto');
+const { v4: uuidv4 } = require('uuid');
+const db = require("../config/mysql");
 /**
  * Genera una firma electrónica (sello) a partir de una cadena y una llave privada.
  * @param {string} cadenaOrigen - Los datos que se van a firmar.
@@ -34,21 +36,32 @@ const firmar_cadena_llave = (cadena, llave, pass) => {
     return signature.toString('base64');
 }
 
-const firma_individual = (req, res) => {
-    const { cadena, tipo_firma, password } = req.body; 
+const firma_individual = async (req, res) => {
+    const { cadena, password, doc_tipo, owner_nombre, owner_apellidos, owner_curp, sign_nombre, sign_apellidos, sign_emisor } = req.body;
+
 
     if (!req.file) {
         return res.status(400).json({ ok: false, error: "No se subió ningún archivo de llave" });
     }
 
+    const con = await db.getConnection();
+
     try{
         const llavePrivada = req.file.buffer;
 
         const sello = firmar_cadena_llave(cadena, llavePrivada, password);
+        const id = uuidv4();
+        const obj = [id, doc_tipo, owner_nombre, owner_apellidos, owner_curp, sign_nombre, sign_apellidos, sign_emisor, cadena, sello];
+
+        console.log(obj);
+        await con.query("INSERT INTO validaciones(doc_uuid, doc_tipo, doc_date, owner_nombre, owner_apellidos, owner_curp, sign_nombre, sign_apellidos, sign_emisor, doc_cadena, doc_sello)"+
+            " VALUES (?, ?, NOW(), ?, ?, ?, ?, ?, ?, ?, ?)", obj
+        );
 
         res.status(200).json({
             ok: true,
-            tipo_firma,
+            id,
+            sign_emisor,
             cadenaOrigen: cadena,
             sello: sello
         });
@@ -58,33 +71,50 @@ const firma_individual = (req, res) => {
             ok: false,
             msg: "firma no valida"
         });
+    }finally{
+        con.release();
     }
     
 }
 
-const firma_multiple = (req, res) => {
-    const {cadena, tipo_firma, password} = req.body;
+const firma_multiple = async (req, res) => {
+    const {password} = req.body;
 
     if (!req.file) {
         return res.status(400).json({ ok: false, error: "No se subió ningún archivo de llave" });
     }
+
+    const con = await db.getConnection();
 
     try{
         const llavePrivada = req.file.buffer;
 
         const obj_final = [];
 
-        for(individual of cadena){
-            const sello = firmar_cadena_llave(individual, llavePrivada, password);
+        const informacion = JSON.parse(req.body.informacion);
+        
+        for(info of informacion){
+            const sello = firmar_cadena_llave(info.cadena, llavePrivada, password);
+            
+            const id = uuidv4();
+            const obj = [id, info.doc_tipo, info.owner_nombre, info.owner_apellidos, info.owner_curp, info.sign_nombre, info.sign_apellidos, info.sign_emisor, info.cadena, sello];
+
             const objeto_individual = {
-                cadenaOrigen: individual,
-                tipo_firma,
-                sello: sello
+                id,
+                sign_emisor: info.sign_emisor,
+                cadenaOrigen: info.cadena,
+                sello
             }
+
+            await con.query("INSERT INTO validaciones(doc_uuid, doc_tipo, doc_date, owner_nombre, owner_apellidos, owner_curp, sign_nombre, sign_apellidos, sign_emisor, doc_cadena, doc_sello)"+
+                " VALUES (?, ?, NOW(), ?, ?, ?, ?, ?, ?, ?, ?)", obj
+            );
+
             obj_final.push(objeto_individual);
         }
 
-       res.status(200).json({ok: true, data: obj_final});
+        res.status(200).json({ok: true, data: obj_final});
+       //res.status(200).json({ok: true});
 
     }catch(err){
         console.log(err);
@@ -92,6 +122,8 @@ const firma_multiple = (req, res) => {
             ok: false,
             msg: "firma no valida"
         });
+    }finally{
+        con.release();
     }
 
 }

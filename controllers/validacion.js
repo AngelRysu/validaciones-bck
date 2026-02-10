@@ -9,7 +9,7 @@ const getValidacion = async (req, res) => {
         return res.status(401).json({ ok: false, msg: 'Falta api key' });
     }
     try {
-        const [dataLeak] = await con.query("SELECT * from validaciones WHERE doc_uuid = ? and status = 'Activo'", [ui]);
+        const [dataLeak] = await con.query("SELECT * from validaciones WHERE doc_uuid = ? and doc_estado = 'Activo'", [ui]);
         return res.status(200).json({ dataLeak });
     } catch (err) {
         console.log(err);
